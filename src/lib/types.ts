@@ -57,6 +57,16 @@ export interface ParsedQuestion {
   correctAnswerIndices: number[];
 }
 
+// ─── Workshop Material Types ────────────────────────────────
+
+export interface Material {
+  _id?: string;
+  title: string;
+  url: string;
+  week: number;
+  createdAt?: string;
+}
+
 // ─── Multiplayer Room Types ───────────────────────────────────
 
 export interface RoomParticipant {

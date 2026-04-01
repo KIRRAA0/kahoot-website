@@ -2,16 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Assessment } from "@/lib/types";
+import { Assessment, Material } from "@/lib/types";
 import AssessmentCard from "@/components/assessment/AssessmentCard";
 
 export default function Dashboard() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [showAddMaterial, setShowAddMaterial] = useState(false);
+  const [materialForm, setMaterialForm] = useState({ title: "", url: "", week: "" });
+  const [submittingMaterial, setSubmittingMaterial] = useState(false);
 
   useEffect(() => {
     fetchAssessments();
+    fetchMaterials();
   }, []);
 
   const fetchAssessments = async () => {
@@ -23,6 +28,46 @@ export default function Dashboard() {
       // Failed to fetch
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMaterials = async () => {
+    try {
+      const res = await fetch("/api/materials");
+      const data = await res.json();
+      setMaterials(Array.isArray(data) ? data : []);
+    } catch {
+      // Failed to fetch
+    }
+  };
+
+  const handleAddMaterial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!materialForm.title || !materialForm.url || !materialForm.week) return;
+
+    setSubmittingMaterial(true);
+    try {
+      const res = await fetch("/api/materials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: materialForm.title,
+          url: materialForm.url,
+          week: Number(materialForm.week),
+        }),
+      });
+      if (res.ok) {
+        const newMaterial = await res.json();
+        setMaterials((prev) =>
+          [...prev, newMaterial].sort((a, b) => a.week - b.week)
+        );
+        setMaterialForm({ title: "", url: "", week: "" });
+        setShowAddMaterial(false);
+      }
+    } catch {
+      // Failed to add
+    } finally {
+      setSubmittingMaterial(false);
     }
   };
 
@@ -109,6 +154,104 @@ export default function Dashboard() {
             {seeding ? "Seeding..." : "Seed Initial Data"}
           </button>
         )}
+      </div>
+
+      {/* Workshop Materials */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Workshop Materials</h2>
+          <button
+            onClick={() => setShowAddMaterial(!showAddMaterial)}
+            className="text-sm px-3 py-1.5 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors"
+          >
+            {showAddMaterial ? "Cancel" : "+ Add Material"}
+          </button>
+        </div>
+
+        {/* Add Material Form */}
+        {showAddMaterial && (
+          <form onSubmit={handleAddMaterial} className="card p-5 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_80px_auto] gap-3 items-end">
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. State Management"
+                  value={materialForm.title}
+                  onChange={(e) => setMaterialForm((f) => ({ ...f, title: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">
+                  URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://canva.link/..."
+                  value={materialForm.url}
+                  onChange={(e) => setMaterialForm((f) => ({ ...f, url: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">
+                  Week
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="#"
+                  value={materialForm.week}
+                  onChange={(e) => setMaterialForm((f) => ({ ...f, week: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submittingMaterial}
+                className="px-5 py-2 rounded-lg bg-kahoot-green text-white font-medium hover:bg-kahoot-green/90 transition-colors disabled:opacity-50 text-sm"
+              >
+                {submittingMaterial ? "Adding..." : "Add"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {materials.map((m) => (
+            <a
+              key={m._id}
+              href={m.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card p-5 flex items-center gap-4 hover:border-primary-500/50 transition-all hover:scale-[1.01] group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-primary-500 mb-0.5">Week {m.week}</p>
+                <p className="font-semibold truncate">{m.title}</p>
+              </div>
+              <svg className="w-5 h-5 text-[var(--muted-foreground)] group-hover:text-primary-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </a>
+          ))}
+          {materials.length === 0 && (
+            <div className="card p-6 text-center text-sm text-[var(--muted-foreground)] col-span-full">
+              No materials yet. Click &quot;+ Add Material&quot; to add the first one.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Assessments Grid */}
