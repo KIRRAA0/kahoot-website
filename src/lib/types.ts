@@ -56,3 +56,53 @@ export interface ParsedQuestion {
   timeLimit: number;
   correctAnswerIndices: number[];
 }
+
+// ─── Multiplayer Room Types ───────────────────────────────────
+
+export interface RoomParticipant {
+  userName: string;
+  joinedAt: string;
+}
+
+export interface RoomAnswer {
+  userName: string;
+  questionIndex: number;
+  selectedIndex: number;
+  isCorrect: boolean;
+  timeSpent: number;
+}
+
+export interface Room {
+  _id?: string;
+  code: string;
+  assessmentId: string;
+  hostName: string;
+  status: "waiting" | "playing" | "scoreboard" | "finished";
+  participants: RoomParticipant[];
+  currentQuestionIndex: number;
+  questionStartedAt: string | null;
+  scoreboardUntil: string | null;
+  answers: RoomAnswer[];
+  totalQuestions: number;
+  questionTimeLimits: number[];
+  createdAt?: string;
+}
+
+export interface PreviousQuestionResult {
+  questionIndex: number;
+  questionText: string;
+  correctAnswerIndex: number;
+  participantResults: {
+    userName: string;
+    selectedIndex: number;
+    isCorrect: boolean;
+    timeSpent: number;
+  }[];
+}
+
+export interface RoomPollResponse {
+  room: Room;
+  currentQuestion?: Question;
+  previousQuestionResults?: PreviousQuestionResult;
+  scores: { userName: string; score: number; totalCorrect: number }[];
+}
