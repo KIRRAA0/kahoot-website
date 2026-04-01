@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Assessment, Material } from "@/lib/types";
+import { Assessment, Material, TechTopic } from "@/lib/types";
 import AssessmentCard from "@/components/assessment/AssessmentCard";
 
 export default function Dashboard() {
@@ -10,13 +10,19 @@ export default function Dashboard() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [topics, setTopics] = useState<TechTopic[]>([]);
+  const [topicFilter, setTopicFilter] = useState("All");
   const [showAddMaterial, setShowAddMaterial] = useState(false);
   const [materialForm, setMaterialForm] = useState({ title: "", url: "", week: "" });
   const [submittingMaterial, setSubmittingMaterial] = useState(false);
+  const [showAddTopic, setShowAddTopic] = useState(false);
+  const [topicForm, setTopicForm] = useState({ title: "", category: "", tagline: "", description: "", url: "" });
+  const [submittingTopic, setSubmittingTopic] = useState(false);
 
   useEffect(() => {
     fetchAssessments();
     fetchMaterials();
+    fetchTopics();
   }, []);
 
   const fetchAssessments = async () => {
@@ -36,6 +42,16 @@ export default function Dashboard() {
       const res = await fetch("/api/materials");
       const data = await res.json();
       setMaterials(Array.isArray(data) ? data : []);
+    } catch {
+      // Failed to fetch
+    }
+  };
+
+  const fetchTopics = async () => {
+    try {
+      const res = await fetch("/api/tech-topics");
+      const data = await res.json();
+      setTopics(Array.isArray(data) ? data : []);
     } catch {
       // Failed to fetch
     }
@@ -69,6 +85,42 @@ export default function Dashboard() {
     } finally {
       setSubmittingMaterial(false);
     }
+  };
+
+  const handleAddTopic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!topicForm.title || !topicForm.category || !topicForm.tagline || !topicForm.description || !topicForm.url) return;
+
+    setSubmittingTopic(true);
+    try {
+      const res = await fetch("/api/tech-topics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(topicForm),
+      });
+      if (res.ok) {
+        const newTopic = await res.json();
+        setTopics((prev) => [...prev, newTopic]);
+        setTopicForm({ title: "", category: "", tagline: "", description: "", url: "" });
+        setShowAddTopic(false);
+      }
+    } catch {
+      // Failed to add
+    } finally {
+      setSubmittingTopic(false);
+    }
+  };
+
+  const topicCategories = ["All", ...Array.from(new Set(topics.map((t) => t.category)))];
+  const filteredTopics = topicFilter === "All" ? topics : topics.filter((t) => t.category === topicFilter);
+
+  const categoryColors: Record<string, string> = {
+    Architecture: "bg-purple-500/10 text-purple-500 border-purple-500/30",
+    "State Management": "bg-kahoot-blue/10 text-kahoot-blue border-kahoot-blue/30",
+    "CI/CD": "bg-kahoot-green/10 text-kahoot-green border-kahoot-green/30",
+    Tool: "bg-kahoot-yellow/10 text-kahoot-yellow border-kahoot-yellow/30",
+    Backend: "bg-kahoot-red/10 text-kahoot-red border-kahoot-red/30",
+    Testing: "bg-cyan-500/10 text-cyan-500 border-cyan-500/30",
   };
 
   const handleSeed = async () => {
@@ -249,6 +301,160 @@ export default function Dashboard() {
           {materials.length === 0 && (
             <div className="card p-6 text-center text-sm text-[var(--muted-foreground)] col-span-full">
               No materials yet. Click &quot;+ Add Material&quot; to add the first one.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tech Topics */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Tech Topics</h2>
+          <button
+            onClick={() => setShowAddTopic(!showAddTopic)}
+            className="text-sm px-3 py-1.5 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors"
+          >
+            {showAddTopic ? "Cancel" : "+ Add Topic"}
+          </button>
+        </div>
+
+        {/* Add Topic Form */}
+        {showAddTopic && (
+          <form onSubmit={handleAddTopic} className="card p-5 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. BLoC Pattern"
+                  value={topicForm.title}
+                  onChange={(e) => setTopicForm((f) => ({ ...f, title: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">Category</label>
+                <select
+                  value={topicForm.category}
+                  onChange={(e) => setTopicForm((f) => ({ ...f, category: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Select category</option>
+                  <option value="Architecture">Architecture</option>
+                  <option value="State Management">State Management</option>
+                  <option value="CI/CD">CI/CD</option>
+                  <option value="Tool">Tool</option>
+                  <option value="Backend">Backend</option>
+                  <option value="Testing">Testing</option>
+                </select>
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">Tagline</label>
+              <input
+                type="text"
+                placeholder="One-line summary"
+                value={topicForm.tagline}
+                onChange={(e) => setTopicForm((f) => ({ ...f, tagline: e.target.value }))}
+                required
+                className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+            <div className="mb-3">
+              <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">Description</label>
+              <textarea
+                placeholder="2-3 sentence description"
+                value={topicForm.description}
+                onChange={(e) => setTopicForm((f) => ({ ...f, description: e.target.value }))}
+                required
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              />
+            </div>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-[var(--muted-foreground)] mb-1 block">URL</label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={topicForm.url}
+                  onChange={(e) => setTopicForm((f) => ({ ...f, url: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submittingTopic}
+                className="px-5 py-2 rounded-lg bg-kahoot-green text-white font-medium hover:bg-kahoot-green/90 transition-colors disabled:opacity-50 text-sm shrink-0"
+              >
+                {submittingTopic ? "Adding..." : "Add Topic"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Category Filters */}
+        {topics.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {topicCategories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setTopicFilter(cat)}
+                className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                  topicFilter === cat
+                    ? "bg-primary-600 text-white border-primary-600"
+                    : "border-[var(--border)] text-[var(--muted-foreground)] hover:border-primary-500/50"
+                }`}
+              >
+                {cat}
+                {cat !== "All" && (
+                  <span className="ml-1 opacity-60">
+                    {topics.filter((t) => t.category === cat).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Topic Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTopics.map((t) => (
+            <a
+              key={t._id}
+              href={t.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card p-5 flex flex-col hover:border-primary-500/50 transition-all hover:scale-[1.01] group"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                    categoryColors[t.category] || "bg-[var(--muted)] text-[var(--muted-foreground)] border-[var(--border)]"
+                  }`}
+                >
+                  {t.category}
+                </span>
+                <svg className="w-4 h-4 text-[var(--muted-foreground)] group-hover:text-primary-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+              </div>
+              <h3 className="font-bold text-base mb-1">{t.title}</h3>
+              <p className="text-xs text-primary-500 font-medium mb-2">{t.tagline}</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed line-clamp-3">{t.description}</p>
+            </a>
+          ))}
+          {filteredTopics.length === 0 && topics.length > 0 && (
+            <div className="card p-6 text-center text-sm text-[var(--muted-foreground)] col-span-full">
+              No topics in this category.
+            </div>
+          )}
+          {topics.length === 0 && (
+            <div className="card p-6 text-center text-sm text-[var(--muted-foreground)] col-span-full">
+              Loading topics...
             </div>
           )}
         </div>

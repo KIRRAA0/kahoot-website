@@ -67,6 +67,18 @@ export interface Material {
   createdAt?: string;
 }
 
+// ─── Tech Topic Types ───────────────────────────────────────
+
+export interface TechTopic {
+  _id?: string;
+  title: string;
+  category: string;
+  tagline: string;
+  description: string;
+  url: string;
+  createdAt?: string;
+}
+
 // ─── Multiplayer Room Types ───────────────────────────────────
 
 export interface RoomParticipant {
