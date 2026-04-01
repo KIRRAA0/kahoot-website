@@ -31,7 +31,7 @@ export default function Navbar() {
                 <div className="h-6 w-1.5 rounded-full bg-kahoot-yellow" />
                 <div className="h-6 w-1.5 rounded-full bg-kahoot-green" />
               </div>
-              <span className="text-lg font-bold">Flutter Kahoot</span>
+              <span className="text-lg font-bold">I&apos;SUPPLY Flutter</span>
             </Link>
             <div className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => (

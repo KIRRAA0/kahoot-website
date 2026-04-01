@@ -99,7 +99,7 @@ export default function UploadPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1">Upload Assessment</h1>
         <p className="text-[var(--muted-foreground)]">
-          Upload a Kahoot XLSX file to add a new assessment.
+          Upload an XLSX file to add a new assessment.
         </p>
       </div>
 

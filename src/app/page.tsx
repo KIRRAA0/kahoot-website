@@ -148,7 +148,7 @@ export default function Dashboard() {
             <div className="h-8 w-2 rounded-full bg-kahoot-yellow" />
             <div className="h-8 w-2 rounded-full bg-kahoot-green" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold">Flutter Assessment Hub</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold">I&#39;SUPPLY Flutter Workshop</h1>
         </div>
         <p className="text-[var(--muted-foreground)] text-lg mt-2">
           Browse questions, take quizzes, and track your Flutter training progress.

@@ -68,7 +68,7 @@ export default function UploadDropzone({ onFileSelect, disabled }: UploadDropzon
         {isDragOver ? "Drop your file here" : "Click to upload or drag and drop"}
       </p>
       <p className="text-xs text-[var(--muted-foreground)]">
-        Kahoot XLSX files only (max 5MB)
+        XLSX files only (max 5MB)
       </p>
     </div>
   );

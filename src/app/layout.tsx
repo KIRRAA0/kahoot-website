@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Flutter Kahoot | Team Assessment Hub",
-  description: "Browse, practice, and track Flutter training assessments",
+  title: "I'SUPPLY Flutter Workshop",
+  description: "Browse, practice, and track Flutter workshop assessments",
 };
 
 export default function RootLayout({
