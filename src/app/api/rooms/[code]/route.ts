@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Room from "@/models/Room";
 import Question from "@/models/Question";
-import { computeScores } from "@/lib/roomUtils";
+import { computeScores, advanceRoomState } from "@/lib/roomUtils";
+import { publishRoomUpdate } from "@/lib/pusher-server";
 
 export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
   try {
@@ -15,40 +16,11 @@ export async function GET(req: NextRequest, { params }: { params: { code: string
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    let stateChanged = false;
-
     // ─── State machine: check for transitions ─────────────────
-    if (room.status === "playing" && room.questionStartedAt) {
-      const timeLimit = room.questionTimeLimits[room.currentQuestionIndex] || 30;
-      const deadline = new Date(room.questionStartedAt).getTime() + timeLimit * 1000;
-      const answersForQuestion = room.answers.filter(
-        (a: { questionIndex: number }) => a.questionIndex === room.currentQuestionIndex
-      );
-      const allAnswered = answersForQuestion.length >= room.participants.length;
-
-      if (allAnswered || Date.now() > deadline) {
-        room.status = "scoreboard";
-        room.scoreboardUntil = new Date(Date.now() + 3000);
-        stateChanged = true;
-      }
-    }
-
-    if (room.status === "scoreboard" && room.scoreboardUntil) {
-      if (Date.now() > new Date(room.scoreboardUntil).getTime()) {
-        if (room.currentQuestionIndex + 1 >= room.totalQuestions) {
-          room.status = "finished";
-        } else {
-          room.currentQuestionIndex += 1;
-          room.questionStartedAt = new Date();
-          room.status = "playing";
-        }
-        room.scoreboardUntil = null;
-        stateChanged = true;
-      }
-    }
-
-    if (stateChanged) {
+    const { transitioned, type } = advanceRoomState(room);
+    if (transitioned) {
       await room.save();
+      await publishRoomUpdate(code, { type });
     }
 
     // ─── Build response ───────────────────────────────────────

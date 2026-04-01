@@ -26,6 +26,55 @@ export interface UserScore {
   totalCorrect: number;
 }
 
+/**
+ * Checks and applies time-based state transitions on a room document.
+ * Returns whether a transition occurred and what type.
+ * The caller is responsible for saving the room afterward.
+ */
+export function advanceRoomState(room: {
+  status: string;
+  questionStartedAt: Date | null;
+  questionTimeLimits: number[];
+  currentQuestionIndex: number;
+  scoreboardUntil: Date | null;
+  totalQuestions: number;
+  participants: { userName: string }[];
+  answers: { questionIndex: number }[];
+}): { transitioned: boolean; type: string } {
+  if (room.status === "playing" && room.questionStartedAt) {
+    const timeLimit = room.questionTimeLimits[room.currentQuestionIndex] || 30;
+    const deadline = new Date(room.questionStartedAt).getTime() + timeLimit * 1000;
+    const answersForQuestion = room.answers.filter(
+      (a) => a.questionIndex === room.currentQuestionIndex
+    );
+    const allAnswered = answersForQuestion.length >= room.participants.length;
+
+    if (allAnswered || Date.now() > deadline) {
+      room.status = "scoreboard";
+      room.scoreboardUntil = new Date(Date.now() + 3000);
+      return { transitioned: true, type: "scoreboard" };
+    }
+  }
+
+  if (room.status === "scoreboard" && room.scoreboardUntil) {
+    if (Date.now() > new Date(room.scoreboardUntil).getTime()) {
+      if (room.currentQuestionIndex + 1 >= room.totalQuestions) {
+        room.status = "finished";
+        room.scoreboardUntil = null;
+        return { transitioned: true, type: "finished" };
+      } else {
+        room.currentQuestionIndex += 1;
+        room.questionStartedAt = new Date();
+        room.status = "playing";
+        room.scoreboardUntil = null;
+        return { transitioned: true, type: "next-question" };
+      }
+    }
+  }
+
+  return { transitioned: false, type: "" };
+}
+
 export function computeScores(
   answers: { userName: string; isCorrect: boolean }[],
   participants: { userName: string }[]

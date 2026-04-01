@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Room from "@/models/Room";
+import { advanceRoomState } from "@/lib/roomUtils";
 import { publishRoomUpdate } from "@/lib/pusher-server";
 
 export async function POST(req: NextRequest, { params }: { params: { code: string } }) {
   try {
-    const { userName } = await req.json();
     const { code } = params;
 
     await connectDB();
@@ -15,21 +15,14 @@ export async function POST(req: NextRequest, { params }: { params: { code: strin
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    if (room.hostName !== userName) {
-      return NextResponse.json({ error: "Only the host can start the quiz" }, { status: 403 });
+    const { transitioned, type } = advanceRoomState(room);
+
+    if (transitioned) {
+      await room.save();
+      await publishRoomUpdate(code, { type });
     }
 
-    if (room.status !== "waiting") {
-      return NextResponse.json({ error: "Room has already started" }, { status: 400 });
-    }
-
-    room.status = "playing";
-    room.currentQuestionIndex = 0;
-    room.questionStartedAt = new Date();
-    await room.save();
-    await publishRoomUpdate(code, { type: "quiz-started" });
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, transitioned, type });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }

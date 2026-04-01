@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useRoomPoll } from "@/hooks/useRoomPoll";
+import { useRoomRealtime } from "@/hooks/useRoomRealtime";
 import RoomLobby from "@/components/multiplayer/RoomLobby";
 import MultiplayerQuizPlayer from "@/components/multiplayer/MultiplayerQuizPlayer";
 import Scoreboard from "@/components/multiplayer/Scoreboard";
@@ -30,7 +30,7 @@ export default function RoomPage() {
   }, [router]);
 
   const { room, currentQuestion, scores, previousQuestionResults, loading, error } =
-    useRoomPoll(code, currentUser || "", !!currentUser);
+    useRoomRealtime(code, currentUser || "", !!currentUser);
 
   // Reset answer result when question changes
   useEffect(() => {
@@ -57,6 +57,19 @@ export default function RoomPage() {
         .catch(() => {});
     }
   }, [room?.status, room?.assessmentId, questionsData.length]);
+
+  const handleAdvance = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      await fetch(`/api/rooms/${code}/advance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userName: currentUser }),
+      });
+    } catch {
+      // Pusher or next poll will catch up
+    }
+  }, [code, currentUser]);
 
   const handleStart = useCallback(async () => {
     if (!currentUser) return;
@@ -146,6 +159,7 @@ export default function RoomPage() {
         currentUser={currentUser}
         scores={scores}
         onAnswer={handleAnswer}
+        onAdvance={handleAdvance}
         hasAnswered={hasAnswered}
         answerResult={answerResult}
       />
@@ -159,6 +173,7 @@ export default function RoomPage() {
         scores={scores}
         currentQuestionIndex={room.currentQuestionIndex}
         totalQuestions={room.totalQuestions}
+        onAdvance={handleAdvance}
       />
     );
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Room from "@/models/Room";
 import Question from "@/models/Question";
+import { publishRoomUpdate } from "@/lib/pusher-server";
 
 export async function POST(req: NextRequest, { params }: { params: { code: string } }) {
   try {
@@ -66,6 +67,12 @@ export async function POST(req: NextRequest, { params }: { params: { code: strin
     }
 
     await room.save();
+
+    if (room.status === "scoreboard") {
+      await publishRoomUpdate(code, { type: "all-answered" });
+    } else {
+      await publishRoomUpdate(code, { type: "answer-submitted", userName });
+    }
 
     return NextResponse.json({ success: true, isCorrect });
   } catch (error) {

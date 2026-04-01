@@ -2,14 +2,20 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { RoomPollResponse } from "@/lib/types";
+import { getPusherClient } from "@/lib/pusher-client";
 
-export function useRoomPoll(code: string, userName: string, enabled: boolean) {
+const FALLBACK_POLL_INTERVAL = 30_000; // 30 seconds
+
+export function useRoomRealtime(code: string, userName: string, enabled: boolean) {
   const [data, setData] = useState<RoomPollResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isFetching = useRef(false);
 
-  const poll = useCallback(async () => {
+  const fetchRoom = useCallback(async () => {
+    if (isFetching.current) return;
+    isFetching.current = true;
+
     try {
       const res = await fetch(`/api/rooms/${code}?userName=${encodeURIComponent(userName)}`);
       if (!res.ok) {
@@ -23,6 +29,7 @@ export function useRoomPoll(code: string, userName: string, enabled: boolean) {
     } catch (e) {
       setError(String(e));
     } finally {
+      isFetching.current = false;
       setLoading(false);
     }
   }, [code, userName]);
@@ -30,18 +37,25 @@ export function useRoomPoll(code: string, userName: string, enabled: boolean) {
   useEffect(() => {
     if (!enabled || !code) return;
 
-    // Immediate first poll
-    poll();
+    // Immediate first fetch
+    fetchRoom();
 
-    // Poll every 1.5 seconds
-    intervalRef.current = setInterval(poll, 1500);
+    // Subscribe to Pusher channel
+    const pusher = getPusherClient();
+    const channel = pusher.subscribe(`room-${code}`);
+    channel.bind("room-updated", () => {
+      fetchRoom();
+    });
+
+    // Fallback slow polling (safety net)
+    const fallback = setInterval(fetchRoom, FALLBACK_POLL_INTERVAL);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      channel.unbind_all();
+      pusher.unsubscribe(`room-${code}`);
+      clearInterval(fallback);
     };
-  }, [enabled, code, poll]);
+  }, [enabled, code, fetchRoom]);
 
   return {
     room: data?.room ?? null,
@@ -50,6 +64,6 @@ export function useRoomPoll(code: string, userName: string, enabled: boolean) {
     previousQuestionResults: data?.previousQuestionResults ?? null,
     loading,
     error,
-    refetch: poll,
+    refetch: fetchRoom,
   };
 }

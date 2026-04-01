@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { PreviousQuestionResult } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import CodeText from "@/components/ui/CodeText";
@@ -16,6 +17,7 @@ interface ScoreboardProps {
   scores: { userName: string; score: number; totalCorrect: number }[];
   currentQuestionIndex: number;
   totalQuestions: number;
+  onAdvance: () => void;
 }
 
 export default function Scoreboard({
@@ -23,7 +25,14 @@ export default function Scoreboard({
   scores,
   currentQuestionIndex,
   totalQuestions,
+  onAdvance,
 }: ScoreboardProps) {
+  // Auto-advance after scoreboard display time (3.2s with slight buffer)
+  useEffect(() => {
+    const timer = setTimeout(onAdvance, 3200);
+    return () => clearTimeout(timer);
+  }, [onAdvance]);
+
   return (
     <div className="min-h-screen bg-[var(--background)] flex flex-col items-center justify-center px-6 py-8">
       {/* Previous question result */}
